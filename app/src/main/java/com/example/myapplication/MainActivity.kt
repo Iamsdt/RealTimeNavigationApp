@@ -5,10 +5,13 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.gson.GsonBuilder
+import com.mapbox.android.core.location.LocationEngineCallback
 import com.mapbox.android.core.location.LocationEngineProvider
+import com.mapbox.android.core.location.LocationEngineResult
 import com.mapbox.android.core.permissions.PermissionsListener
 import com.mapbox.android.core.permissions.PermissionsManager
 import com.mapbox.api.directions.v5.models.DirectionsResponse
@@ -18,6 +21,7 @@ import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
 import com.mapbox.mapboxsdk.geometry.LatLng
+import com.mapbox.mapboxsdk.geometry.LatLngBounds
 import com.mapbox.mapboxsdk.location.LocationComponent
 import com.mapbox.mapboxsdk.location.LocationComponentActivationOptions
 import com.mapbox.mapboxsdk.location.modes.CameraMode
@@ -38,9 +42,11 @@ import kotlinx.android.synthetic.main.activity_main.*
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.lang.Exception
 
 
-class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListener {
+class MainActivity : AppCompatActivity(), OnMapReadyCallback,
+    PermissionsListener, LocationEngineCallback<LocationEngineResult> {
 
     private val ICON_ID = "ICON_ID"
     private var mapbox: MapboxMap? = null
@@ -88,9 +94,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListene
             startActivityForResult(intent, 121)
         }
 
-        fab2.isClickable = false
         fab2.setOnClickListener {
-            val simulateRoute = false
+            val simulateRoute = true
             val options = NavigationLauncherOptions.builder()
                 .directionsRoute(currentRoute)
                 .shouldSimulateRoute(simulateRoute)
@@ -98,6 +103,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListene
 
             NavigationLauncher.startNavigation(this, options)
         }
+
+        fab2.hide()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -114,8 +121,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListene
     }
 
     private fun generateRoot(loc: LatLng) {
-        val last = locationComponent?.lastKnownLocation
-        val origin = Point.fromLngLat(last!!.longitude, last.latitude)
+        val last = locationComponent?.lastKnownLocation!!
+        val origin = Point.fromLngLat(last.longitude, last.latitude)
         val destination = Point.fromLngLat(loc.longitude, loc.latitude)
 
         NavigationRoute.builder(this)
@@ -143,7 +150,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListene
                         Log.e(TAG, "No routes found")
                         return
                     }
-
                     currentRoute = response.body()!!.routes()[0]
                     //on the map
                     if (navigationMapRoute != null) {
@@ -156,11 +162,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListene
                     }
 
                     navigationMapRoute?.addRoute(currentRoute)
-                    fab2.isClickable = true
-                    mapbox?.moveCamera(CameraUpdateFactory.zoomOut())
-
+                    fab2.show()
                 }
             })
+
+        val bounds = LatLngBounds.Builder()
+            .include(LatLng(last.latitude, last.longitude))
+            .include(LatLng(loc))
+            .build()
+
+        mapbox?.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100))
     }
 
 
@@ -168,7 +179,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListene
         this.mapbox = mapboxMap
         mapboxMap.setStyle(Style.MAPBOX_STREETS) { style ->
             enableLocationComponent(style)
-            mapbox?.moveCamera(CameraUpdateFactory.zoomIn())
             addDestinationIconSymbolLayer(style)
         }
     }
@@ -206,12 +216,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListene
             locationComponent?.cameraMode = CameraMode.TRACKING
             val engine = LocationEngineProvider.getBestLocationEngine(this)
             locationComponent?.locationEngine = engine
+            engine.getLastLocation(this)
 
         } else {
             permissionManager = PermissionsManager(this)
             permissionManager?.requestLocationPermissions(this)
         }
 
+    }
+
+    override fun onSuccess(result: LocationEngineResult) {
+        val last = result.lastLocation!!
+        val lat = LatLng(last.latitude, last.longitude)
+        Log.e("Called", "Called")
+        mapbox?.moveCamera(CameraUpdateFactory.newLatLngZoom(lat, 12.0))
+    }
+
+    override fun onFailure(exception: Exception) {
+        Log.e("Eroro", exception.message)
     }
 
     override fun onPermissionResult(granted: Boolean) {
