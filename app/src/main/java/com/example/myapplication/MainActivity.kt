@@ -90,7 +90,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListene
 
         fab2.isClickable = false
         fab2.setOnClickListener {
-            val simulateRoute = true
+            val simulateRoute = false
             val options = NavigationLauncherOptions.builder()
                 .directionsRoute(currentRoute)
                 .shouldSimulateRoute(simulateRoute)
@@ -157,7 +157,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListene
 
                     navigationMapRoute?.addRoute(currentRoute)
                     fab2.isClickable = true
-                    mapbox?.moveCamera(CameraUpdateFactory.zoomBy(6.0))
+                    mapbox?.moveCamera(CameraUpdateFactory.zoomOut())
 
                 }
             })
@@ -168,7 +168,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, PermissionsListene
         this.mapbox = mapboxMap
         mapboxMap.setStyle(Style.MAPBOX_STREETS) { style ->
             enableLocationComponent(style)
-            mapbox?.moveCamera(CameraUpdateFactory.zoomBy(12.0))
+            mapbox?.moveCamera(CameraUpdateFactory.zoomIn())
             addDestinationIconSymbolLayer(style)
         }
     }
