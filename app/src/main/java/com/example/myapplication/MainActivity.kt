@@ -285,6 +285,5 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback,
         map.onStop()
     }
 
-    val token =
-        "pk.eyJ1IjoiY2l0eWNhcnByZW1pdW0iLCJhIjoiY2sxY3dkOWoxMDF6YjNjcGkzY2h5aXBldCJ9.W5vq2kbSnDz_I5p0m2HZ0A"
+    val token = "your token"
 }
